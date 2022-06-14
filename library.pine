@@ -1,0 +1,677 @@
+//credits: @ peacefulLizard50262 , @ gorx1 , @ midtownsk8rguy , @ AlexGrover, @ Montyjus, @ Jiehonglim
+//@ liw0 , @ tbiktag, @ Joris Duyck (JD) , @ Alex Orekhov (everget) , @ Jurik , @ Bruno Pio, @ lejmer , @ RicardoSantos
+//@ xel_arjona , @ Shizaru , @ Glaz
+
+// @ description <Short description of your library>
+library("Community TA")
+
+def_stdev = ta.stdev(close, 100)
+def_mean  = ta.sma(close, 100)
+def_stmin = def_mean - (def_stdev * 2)
+def_stmax = def_mean - (def_stdev * 2)
+
+//Note that you can include Pine code in your description by wrapping it in these tags:
+//  [pine][/pine] 
+
+
+
+
+
+
+
+
+//@function 
+//@param 
+//@returns 
+all_data(int number = 1) =>
+    all_data = bar_index + number
+    all_data
+
+//@function 
+//@param 
+//@returns 
+timeChange(period) =>
+	ta.change(time(period))
+
+//@function 
+//@param 
+//@returns 
+formated_string(int input) =>
+    formated_string = str.format("{0,number,integer}", input)
+    formated_string
+
+//@function 
+//@param 
+//@returns 
+baseline(float _source = close, simple string _period = "D", string _user = "true", string _custom = "15", bool _manual = false, float _mInput = na) => //can any one explain why I HAD to use a string for my _user "bool" ??
+    string self     = syminfo.tickerid
+    bool   live     = barstate.isrealtime
+    period          = _user == "false" ? _period : _user == "true" ? _custom : "D"
+    float  baseline = request.security(self, period, _source[live ? 1 :0])[live ? 0 : 1]
+    result          = _manual == false ? baseline : _mInput
+    result
+
+//@function 
+//@param 
+//@returns 
+diff(float _src = close, int _N = 4) =>
+    float derivative = 0.0
+    if _N == 2
+        derivative := (_src - _src[2]) / 2
+        derivative
+    else if _N == 3
+        derivative := (_src + _src[1] - _src[2] - _src[3]) / 4
+        derivative
+    else if _N == 4
+        derivative := (_src + 2 * _src[1] - 2 * _src[3] - _src[4]) / 8
+        derivative
+    else if _N == 5
+        derivative := (_src + 3 * _src[1] + 2 * _src[2] - 2 * _src[3] - 3 * _src[4] - _src[5]) / 16
+        derivative
+    else if _N == 6
+        derivative := (_src + 4 * _src[1] + 5 * _src[2] - 5 * _src[4] - 4 * _src[5] - _src[6]) / 32
+        derivative
+    else if _N == 7
+        derivative := (_src + 5 * _src[1] + 9 * _src[2] + 5 * _src[3] - 5 * _src[4] - 9 * _src[5] - 5 * _src[6] - _src[7]) / 64
+        derivative
+    else if _N == 8
+        derivative := (_src + 6 * _src[1] + 14 * _src[2] + 14 * _src[3] - 14 * _src[5] - 14 * _src[6] - 6 * _src[7] - _src[8]) / 128
+        derivative
+    else if _N == 9
+        derivative := (_src + 7 * _src[1] + 20 * _src[2] + 28 * _src[3] + 14 * _src[4] - 14 * _src[5] - 28 * _src[6] - 20 * _src[7] - 7 * _src[8] - _src[9]) / 256
+        derivative
+    else if _N == 10
+        derivative := (_src + 8 * _src[1] + 27 * _src[2] + 48 * _src[3] + 42 * _src[4] - 42 * _src[6] - 48 * _src[7] - 27 * _src[8] - 8 * _src[9] - _src[10]) / 512
+        derivative
+    derivative
+
+//@function 
+//@param 
+//@returns 
+wpolyreg(float source = close, int length = 25, int offset = 0, int degree = 1) => 
+    if bar_index + 1 > length - 1
+        var X = matrix.new<float>(length, degree + 1, 1)
+        var W = matrix.new<float>(length, length       , 0)
+        
+        for i = 0 to length - 1
+            for j = 0 to degree
+                matrix.set(X, i, j, math.pow(length - i, j))
+            
+            matrix.set(W, i, i, length - i)    
+        
+        var XT  = matrix.transpose(X)
+        var XTW = matrix.mult(XT, W)
+        var source   = length - off
+      
+        Y      = array.new<float>(length, 1)
+        buffer = array.new<float>(      )
+        
+        for i = 0 to length - 1
+            array.set(Y, i, source[i])
+        
+        B = matrix.mult(matrix.mult(matrix.pinv(matrix.mult(XTW, X)), XTW), Y)
+        
+        for i = 0 to degree
+            array.push(buffer, array.get(B, i) * math.pow(source, i))
+        
+        array.sum(buffer) 
+
+//@function 
+//@param 
+//@returns 
+wvar(float source, int length) => 
+    float sum   = 0.0
+    float sum_w = 0.0
+    wm    = ta.wma(source, length)
+    
+    for i = 0 to length - 1
+        w      = length - i
+        sum   := sum + math.pow(source[i] - wm, 2) * w
+        sum_w := sum_w + w
+
+    sum / sum_w 
+
+//@function 
+//@param 
+//@returns 
+wcov(float source, float source2, int length) => 
+    float sum   = 0.0
+    float sum_w = 0.0    
+    wm_x  = ta.wma(source, length)
+    wm_y  = ta.wma(source2, length)
+    
+    for i = 0 to length - 1
+        w      = length - i
+        sum   := sum + (source[i] - wm_x) * (source2[i] - wm_y) * w
+        sum_w := sum_w + w
+
+    sum / sum_w   
+
+//@function 
+//@param 
+//@returns 
+wcorr(float source, float source2, int length) => 
+    wcov(source, source2, length) / math.sqrt(wvar(source, length) * wvar(source2, length)) 
+
+//== 2 Pole Butterworth Highpass Filter ==//
+//@function 
+//@param 
+//@returns 
+butterworthHP(float Series, float Period) =>
+    var float ALPHA =  math.pi * math.sqrt(2.0) / Period
+    var float BETA  =  math.exp(-ALPHA )
+    var float COEF2 = -math.pow(BETA, 2)
+    var float COEF1 =  math.cos( ALPHA ) * 2.0 * BETA
+    var float COEF0 =  (1.0 + COEF1 - COEF2) * 0.25
+    float tmp    = nz(Series[1],  Series)
+    float whiten =    Series + nz(Series[2], tmp) - 2.0 * tmp 
+    float smooth = na, smooth := COEF0 *     whiten     +
+                                 COEF1 *  nz(smooth[1]) +
+                                 COEF2 *  nz(smooth[2])
+
+//===== 2 Pole Super Smoother Filter =====//
+//@function 
+//@param 
+//@returns 
+superSmoother(float Series, float Period) =>
+    var float ALPHA =  math.pi * math.sqrt(2.0) / Period
+    var float BETA  =  math.exp(-ALPHA )
+    var float COEF2 = -math.pow(BETA, 2)
+    var float COEF1 =  math.cos( ALPHA ) * 2.0 * BETA
+    var float COEF0 =  1.0 - COEF1 - COEF2
+    float sma2   = math.avg(Series, nz(Series[1], Series))
+    float smooth = na, smooth := COEF0 *      sma2      +
+                                 COEF1 *  nz(smooth[1]) +
+                                 COEF2 *  nz(smooth[2])
+
+//===== Faster Root Mean Square =====//
+//@function 
+//@param 
+//@returns 
+fastRMS(float Series, float Period) =>
+    if Period < 1
+        runtime.error("Err: fastRMS(Period=) is less than 1")
+    var float COEF0 = 2.0 / (Period + 1)
+    var float COEF1 = 1.0 -  COEF0
+    float pow = math.pow(Series, 2)
+    float ema = na, ema := COEF0 *    pow +
+                           COEF1 * nz(ema[1], pow)
+    nz(Series / math.sqrt(ema))
+
+//@function 
+//@param 
+//@returns 
+vwap(float source = close, string isNewPeriod = "Session", int custom = 15) => 
+	var float sumSrcVol = na
+	var float sumVol = na
+    var float sumSrcSrcVol = na
+    _custom = format_string(custom)
+    _isNewPeriod = 
+     isNewPeriod == "Session" ? timeChange("D")   :
+     isNewPeriod == "Week"    ? timeChange("W")   :
+     isNewPeriod == "Month"   ? timeChange("M")   :
+     isNewPeriod == "Quarter" ? timeChange("3M")  :
+     isNewPeriod == "Year"    ? timeChange("12M") : 
+     isNewPeriod == "Custom"  ? _custom           : na
+	sumSrcVol := _isNewPeriod ? source * volume : source * volume + sumSrcVol[1]
+	sumVol := _isNewPeriod ? volume : volume + sumVol[1]
+	sumSrcSrcVol := _isNewPeriod ? volume * math.pow(source, 2) : volume * math.pow(source, 2) + sumSrcSrcVol[1]
+	result = sumSrcVol / sumVol
+	result
+
+//@function 
+//@param 
+//@returns 
+ema(float source = close, int length = 12) => 
+    alpha = 2 / (length + 1)
+    float result = 0.0
+    result := na(result[1]) ? source : alpha * source + (1 - alpha) * nz(result[1])
+    result
+
+//@function 
+//@param 
+//@returns 
+qqe2(float src = close, int len = 7, int smoothing = 5, float qqe_factor = 4.236) =>
+    wilders_period = len * 2 - 1
+
+    rsi_ma = ema(src, smoothing)
+
+    atr_rsi = math.abs(nz(rsi_ma[1]) - rsi_ma)
+    ma_atr_rsi = ema(atr_rsi, wilders_period)
+    delta_fast_atr_rsi = ema(ma_atr_rsi, wilders_period) * qqe_factor
+
+    long_band = 0.0
+    short_band = 0.0
+    trend = 0
+
+    new_short_band = rsi_ma + delta_fast_atr_rsi
+    new_long_band = rsi_ma - delta_fast_atr_rsi
+
+    long_band := rsi_ma[1] > long_band[1] and rsi_ma > long_band[1] ? math.max(long_band[1], new_long_band) : new_long_band
+    short_band := rsi_ma[1] < short_band[1] and rsi_ma < short_band[1] ? math.min(short_band[1], new_short_band) : new_short_band
+
+    trend := ta.cross(rsi_ma, short_band[1]) ? 1 : ta.cross(long_band[1], rsi_ma) ? -1 : nz(trend[1], 1)
+
+    // Return
+    trend == 1 ? long_band : short_band
+
+//@function 
+//@param 
+//@returns 
+qqe1(float src = close, int len = 7, int smoothing = 5, float qqe_factor = 4.236) =>
+    wilders_period = len * 2 - 1
+
+    rsi_ma = ema(src, smoothing)
+
+    atr_rsi = math.abs(nz(rsi_ma[1]) - rsi_ma)
+    ma_atr_rsi = ema(atr_rsi, wilders_period)
+    delta_fast_atr_rsi = ema(ma_atr_rsi, wilders_period) * qqe_factor
+
+    result = 0.0
+    result := rsi_ma > nz(result[1]) ? rsi_ma - delta_fast_atr_rsi < result[1] ? result[1] : rsi_ma - delta_fast_atr_rsi : rsi_ma + delta_fast_atr_rsi > result[1] ? result[1] : rsi_ma + delta_fast_atr_rsi
+
+    // Return
+    result
+
+f(x) => //do not export
+    .5 * (1 - math.cos(x * 3.14159))
+
+d(x, length) => //do not export
+    f(x / length) - f((x - 1) / length)
+
+
+hcFilter(a, b, length) => //do not export
+    float sum = 0
+    for i = 1 to length by 1
+        sgn = f(i / length)
+        sum += (sgn * b + (1 - sgn) * a[i - 1]) * d(i, length)
+        sum
+    sum
+
+//Hybrid Convolution Filter 
+//@function 
+//@param 
+//@returns 
+hcf(float src = close, int len = 10) =>
+    float output = 0.
+    output := hcFilter(src, nz(output[1], src), len)
+    result := output
+    result
+
+ama(er, x) => //do not export
+    a = 0.
+    a := er * x + (1 - er) * nz(a[1], x)
+    a
+
+//@function 
+//@param 
+//@returns 
+a2rma(float src = close, int len = 10)
+    er = math.abs(ta.change(src, len)) / math.sum(math.abs(ta.change(src)), len)
+    //----
+    ma = 0.
+    d = ta.cum(math.abs(src - nz(ma[1], src))) / bar_index * gamma
+    ma := ama(er, ama(er, src > nz(ma[1], src) + d ? src + d : src < nz(ma[1], src) - d ? src - d : nz(ma[1], src)))
+    //----
+    result := ma
+    result
+
+//TODO: MAKE A NICE ALIES FOR THE FUNCTIONS , PUT ALIES IN FULL FUNCTION NAME COMPILER DIRECTIVE
+//TODO: MAKE A NICE FUNCTION THAT ENCAPSULATES THE AVERAGES AND THE DEVIATIONS 
+
+
+
+//@function 
+//@param 
+//@returns 
+median(float source = close, int length = 100) =>
+    median  = percentile_nearest_rank(source, length, 50)
+    median
+
+//@function 
+//@param 
+//@returns 
+trimean(float source = close, int length = 100) =>
+    p25   = percentile_nearest_rank(source, length, 25)
+    p50   = percentile_nearest_rank(source, length, 50)
+    p75   = percentile_nearest_rank(source, length, 75)
+    trimean = (p25 + p50 * 2 + p75) / 4
+    trimean
+
+//@function 
+//@param 
+//@returns 
+midhinge(float source = close, int length = 100) =>
+    p25   = percentile_nearest_rank(source, length, 25)    
+    p75   = percentile_nearest_rank(source, length, 75)
+    midhinge = (p25 + p75) / 2
+    midhinge
+
+//@function 
+//@param 
+//@returns 
+midrange(float source = close, int length = 100) =>
+    min = ta.lowest(source, length)
+    max = ta.highest(source, length)
+    midrange = (min + max) / 2
+    midrange
+
+//@function 
+//@param 
+//@returns 
+vwmean(float source = close, int length = 100) =>
+    float cw = 0
+    float cd = 0.0
+    float w_sum = 0.0
+    float d_sum = 0.0
+    for i = 0 to length - 1 by 1
+        cd = source[i]
+        cw = volume[i]
+        d_sum += cw * cd
+        w_sum += cw
+        w_sum
+    vwmean = d_sum / w_sum
+    vwmean
+
+//@function 
+//@param 
+//@returns 
+harmonic_mean(float source = close, int length = 100) =>
+    float sum = 0.0
+    for i = 0 to length - 1 by 1
+        sum += 1 / source[i]
+        sum
+    harmonic_mean = length / sum
+    harmonic_mean
+
+//@function 
+//@param 
+//@returns 
+geometric_mean(float source = close, int length = 100) =>
+    float prod = 1.0
+    for i = 0 to length - 1 by 1
+        prod *= source[i]
+        prod
+    geometric_mean = math.pow(prod, 1 / length)
+    geometric_mean
+
+//@function 
+//@param 
+//@returns 
+quadratic_mean(float source = close, int length = 100) =>
+    float sum = 0.0
+    for i = 0 to length - 1 by 1
+        sum += math.pow(source[i], 2)
+        sum
+    quadratic_mean = math.sqrt(sum / length)
+    quadratic_mean
+
+//@function 
+//@param 
+//@returns 
+gstdev(float source = close, int length = 100, bool l = false) =>
+    geometric_mean = geometric_mean(source, length)
+    float sum = 0.0
+    for i = 0 to length - 1 by 1
+        sum += math.pow(math.log(source[i] / geometric_mean), 2)
+        sum
+    gstdev = math.exp(math.sqrt(sum / length))
+    gstdev
+
+//@function 
+//@param 
+//@returns 
+hstdev(float source = close, int length = 100) =>
+    harmonic_mean = harmonic_mean(source, length)
+    float sum = 0.0
+    for i = 0 to length - 1 by 1
+        sum += math.pow(math.pow(source[i], -1) - math.pow(harmonic_mean, -1), 2)
+        sum
+    hstdev = math.pow(math.sqrt(sum / length), -1)
+    hstdev
+
+//@function 
+//@param 
+//@returns 
+avgdev(float source = close, int length = 100, float basis = def_mean) =>
+    float sum = 0.0
+    for i = 0 to length - 1 by 1
+        sum += math.abs(source[i] - basis)
+        sum
+    avgdev = sum / length
+    avgdev
+
+//@function 
+//@param 
+//@returns 
+stdev(float source = close, int length = 100, float basis = def_mean) =>
+    float sum = 0.0
+    for i = 0 to length - 1 by 1
+        sum += math.pow(source[i] - basis, 2)
+        sum
+    stdev = math.sqrt(sum / length)
+    stdev
+
+//@function 
+//@param 
+//@returns 
+mdev(float source = close, int length = 100, float basis = def_mean) =>
+    pool = array.new_float()
+    for i = 0 to length - 1 by 1
+        array.push(pool, math.abs(source[i] - basis))
+    mdev = array.median(pool)
+    mdev
+
+//@function 
+//@param 
+//@returns 
+vwstdev(float source = close, int length = 100, float basis = def_mean) =>
+    float d_sum = 0.0
+    float w_sum = 0.0
+    float cd = 0.0
+    for i = 0 to length - 1 by 1
+        cd = source[i]
+        cw = volume[i]
+        d_sum += cw * math.pow(cd - basis, 2)
+        w_sum += cw
+        w_sum
+    vwstdev = math.sqrt(d_sum / w_sum)
+    vwstdev
+
+//@function 
+//@param 
+//@returns 
+vwavdev(float source = close, int length = 100, float basis = def_mean) =>
+    float d_sum = 0.0
+    float w_sum = 0.0
+    float cd = 0.0
+    for i = 0 to length - 1 by 1
+        cd = source[i]
+        cw = volume[i]
+        d_sum += cw * math.abs(cd - basis)
+        w_sum += cw
+        w_sum
+    vwavdev = d_sum / w_sum
+    vwavdev
+
+//@function 
+//@param 
+//@returns 
+wstdev(float source = close, int length = 100) => 
+    float sum   = 0.0
+    float sum_w = 0.0
+    wm    = ta.wma(source, length)
+    
+    for i = 0 to length - 1
+        w      = length - i
+        sum   := sum + math.pow(source[i] - wm, 2) * w
+        sum_w := sum_w + w 
+
+    wstdev = math.sqrt(sum / sum_w) 
+    wstdev
+
+//@function 
+//@param 
+//@returns 
+stdev_full(float src, float avg, float dev = 2, int len = 20, bool pol = true) =>
+    stdev = dev * ta.stdev(src, len)
+    result = pol == true ? avg + stdev : avg - stdev
+    result
+
+//@function 
+//@param 
+//@returns 
+gstdv_full(float src, float avg, float dev = 2, int len = 20, bool pol = false) =>
+    float result = na
+    lsrc = math.log(src)
+    stdev = dev * ta.stdev(lsrc, len)
+    lavg = math.log(avg)
+    out = pol == true ? lavg + stdev : lavg - stdev
+    result := math.exp(out)
+    result
+
+//@function 
+//@param 
+//@returns 
+midpoint(float source = close, int length = 100) =>
+    min = ta.lowest(source, length)
+    max = ta.highest(source, length)
+    range = max - min
+    midpoint = range / 4
+    midpoint
+
+//@function 
+//@param 
+//@returns 
+min_max_normalization(float source = close, int length = 100, float mean = def_mean, float a = 0, float b = 1) =>
+    min = ta.lowest(source, length)
+    max = ta.highest(source, length)
+    min_max_normalization = a + (source - min) * (b - a) / (max - min)
+    min_max_normalization
+
+//@function 
+//@param 
+//@returns 
+mean_normalization(float source = close, int length = 100, float mean = def_mean) =>
+    min = ta.lowest(source, length)
+    max = ta.highest(source, length)
+    mean_normalization = (source - mean) / (max - min)
+    mean_normalization
+
+//@function 
+//@param 
+//@returns 
+standardization(float source = close, float mean = def_mean, float stdev = def_stdev) =>
+    mean_normalization = (source - mean) / stdev
+    mean_normalization
+
+//@function 
+//@param 
+//@returns 
+scale_unit_length(float source = close, int length = 100) =>
+    min = ta.lowest(source, length)
+    max = ta.highest(source, length)    
+    scale_unit_length = source / (max - min)
+    scale_unit_length
+
+//@function 
+//@param 
+//@returns 
+min_max_alt(float source = close, float min = def_stmin, float max = def_stmax, bool pass = true) => 
+    //source is an input.source
+    //min is an input.float
+    //max is an input.float
+    //offset is an input.float
+    //scale is an input.int
+    //pass bypasses the normalization function
+    num  = source - min
+    den  = max - min
+    norm = num / den
+    out  = pass == true ? norm : source
+    out
+
+//@function 
+//@param 
+//@returns 
+wlinreg(float source = close, int length = 25, int offset = 0) => 
+    b = wstdev(source, length) / wstdev(bar_index + offset, length) * wcorr(source, bar_index + offset, length)    
+    a = ta.wma(source, length) - b * ta.wma(bar_index + offset, length)
+    a + b * bar_index 
+
+//@function 
+//@param 
+//@returns 
+heiken_ashi_color(bool enable = true) =>
+    ha_close = enable == true ? (open + high + low + close) / 4 : close
+    ha_open  = float(na) 
+    ha_open := enable == true ? na(ha_open[1]) ? (open + close) / 2 : (nz(ha_open[1]) + nz(ha_close[1])) / 2 : open
+    ha_high  = enable == true ? math.max(high, math.max(ha_open, ha_close)) : high
+    ha_low   = enable == true ? math.min(low,  math.min(ha_open, ha_close)) : low
+    ha_color = enable == true ? ha_close > ha_open ? color.new(#26a69a, 0) : color.new(#ef5350, 0) : close >= open ? color.new(#26a69a, 0) : color.new(#ef5350, 0) 
+    ha_color
+
+//@function 
+//@param 
+//@returns 
+ha_close() =>
+    ha_close = (open + high + low + close) / 4
+    ha_close
+
+//@function 
+//@param 
+//@returns 
+ha_open() =>
+    ha_open  = float(na)
+    ha_close = ha_close()
+    ha_open := na(ha_open[1]) ? (open + close) / 2 : (nz(ha_open[1]) + nz(ha_close[1])) / 2 
+    ha_open
+
+//@function 
+//@param 
+//@returns 
+ha_high() =>
+    ha_close = ha_close()
+    ha_open  = ha_open()
+    ha_high  = math.max(high, math.max(ha_open, ha_close))
+    ha_high
+
+//@function 
+//@param 
+//@returns 
+ha_low() =>
+    ha_close = ha_close()
+    ha_open  = ha_open()
+    ha_low = math.min(low,  math.min(ha_open, ha_close))
+    ha_low
+
+//@function 
+//@param 
+//@returns 
+TopVector(float source = close, int start1 = 1, int start2 = 1, int start3 = 1, int length1 = 1, int length2 = 1, float _decay = 0.005) =>
+    var float decay = ta.atr(10) * _decay
+    var float _top = source
+    int _final_count = 0
+    float _previous = nz(_top[1], source)
+    _top := source >= _previous ? source : _previous - (decay * _final_count[1])
+    int _counter = bar_index - ta.valuewhen(close >= _top, bar_index, 0)
+    switch
+        _counter <= length1 => _final_count := start1
+        _counter <= length2 => _final_count := start2
+        =>                     _final_count := start3
+    _top
+
+//@function 
+//@param 
+//@returns 
+BotVector(float source = close, int start1 = 1, int start2 = 1, int start3 = 1, int length1 = 1, int length2 = 1, _decay = 0.005) => 
+    var float decay = ta.atr(10) * _decay
+    var float _bot = source
+    int _final_count = 0
+    float _previous = nz(_bot[1], source)
+    _bot := source <= _previous ? source : _previous + (decay * _final_count[1])
+    int _counter = bar_index - ta.valuewhen(close <= _bot, bar_index, 0)
+    switch
+        _counter <= length1 => _final_count := start1
+        _counter <= length2 => _final_count := start2
+        =>                     _final_count := start3
+    _bot
