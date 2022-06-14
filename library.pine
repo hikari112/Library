@@ -316,10 +316,17 @@ a2rma(float src = close, int len = 10)
     result := ma
     result
 
+//IDWMA
+calcWeight(src, length, i) => //do not export
+    distanceSum = 0.0
+    for j = 0 to length - 1 by 1
+        distanceSum += math.abs(nz(src[i]) - nz(src[j]))
+        distanceSum
+    distanceSum
+
+
 //TODO: MAKE A NICE ALIES FOR THE FUNCTIONS , PUT ALIES IN FULL FUNCTION NAME COMPILER DIRECTIVE
 //TODO: MAKE A NICE FUNCTION THAT ENCAPSULATES THE AVERAGES AND THE DEVIATIONS 
-
-
 
 //@function 
 //@param 
