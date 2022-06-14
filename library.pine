@@ -306,13 +306,13 @@ ama(er, x) => //do not export
 //@function 
 //@param 
 //@returns 
-a2rma(float src = close, int len = 10)
+a2rma(float src = close, int len = 10, float gamma = 3) =>
     er = math.abs(ta.change(src, len)) / math.sum(math.abs(ta.change(src)), len)
     //----
     ma = 0.
     d = ta.cum(math.abs(src - nz(ma[1], src))) / bar_index * gamma
     ma := ama(er, ama(er, src > nz(ma[1], src) + d ? src + d : src < nz(ma[1], src) - d ? src - d : nz(ma[1], src)))
-    //----
+    float result = 0
     result := ma
     result
 
