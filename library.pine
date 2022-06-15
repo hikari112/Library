@@ -46,7 +46,9 @@ format_string(int input) =>
 baseline(float _source = close, simple string _period = "D", string _user = "true", string _custom = "15", bool _manual = false, float _mInput = na) => //can any one explain why I HAD to use a string for my _user "bool" ??
     string self     = syminfo.tickerid
     bool   live     = barstate.isrealtime
-    period          = _user == "false" ? _period : _user == "true" ? _custom : "D"
+    period          = _user == "false" ? _period : _user == "true" ? _custom : "In baseline() please use 'true' or 'false' for _user."
+    if period      == "ERROR"
+        runtime.error("Please use 'true' or 'false'.")
     float  baseline = request.security(self, period, _source[live ? 1 :0])[live ? 0 : 1]
     result          = _manual == false ? baseline : _mInput
     result
