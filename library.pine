@@ -422,6 +422,9 @@ hstdev(float source = close, int length = 100) =>
     hstdev = math.pow(math.sqrt(sum / length), -1)
     hstdev
 
+harmonic_deviation(float source = close, int length = 100, float dev = 0) =>
+    pow(pow(hstdev(source, length), 1) - pow(dev, 1) - pow(dev, 1), 1) //super broken //TODO: FIX THIS
+
 //@function 
 //@param 
 //@returns 
