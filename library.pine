@@ -462,8 +462,8 @@ vwstdev(float source = close, int length = 100, float basis = def_mean) =>
     float w_sum = 0.0
     float cd = 0.0
     for i = 0 to length - 1 by 1
-        cd = source[i]
-        cw = volume[i]
+        cd := source[i]
+        cw := volume[i]
         d_sum += cw * math.pow(cd - basis, 2)
         w_sum += cw
         w_sum
