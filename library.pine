@@ -85,36 +85,7 @@ diff(float _src = close, int _N = 4) =>
         derivative
     derivative
 
-//@function 
-//@param 
-//@returns 
-wpolyreg(float source = close, int length = 25, int offset = 0, int degree = 1) => 
-    if bar_index + 1 > length - 1
-        var X = matrix.new<float>(length, degree + 1, 1)
-        var W = matrix.new<float>(length, length       , 0)
-        
-        for i = 0 to length - 1
-            for j = 0 to degree
-                matrix.set(X, i, j, math.pow(length - i, j))
-            
-            matrix.set(W, i, i, length - i)    
-        
-        var XT  = matrix.transpose(X)
-        var XTW = matrix.mult(XT, W)
-        var source   = length - off
-      
-        Y      = array.new<float>(length, 1)
-        buffer = array.new<float>(      )
-        
-        for i = 0 to length - 1
-            array.set(Y, i, source[i])
-        
-        B = matrix.mult(matrix.mult(matrix.pinv(matrix.mult(XTW, X)), XTW), Y)
-        
-        for i = 0 to degree
-            array.push(buffer, array.get(B, i) * math.pow(source, i))
-        
-        array.sum(buffer) 
+
 
 //@function 
 //@param 
@@ -157,7 +128,7 @@ wcorr(float source, float source2, int length) =>
 //@function 
 //@param 
 //@returns 
-butterworthHP(float Series, float Period) =>
+butterworthHP(float Series = close, int Period = 10) => //not for overlay
     var float ALPHA =  math.pi * math.sqrt(2.0) / Period
     var float BETA  =  math.exp(-ALPHA )
     var float COEF2 = -math.pow(BETA, 2)
@@ -173,7 +144,7 @@ butterworthHP(float Series, float Period) =>
 //@function 
 //@param 
 //@returns 
-superSmoother(float Series, float Period) =>
+superSmoother(float Series = close, int Period = 10) =>
     var float ALPHA =  math.pi * math.sqrt(2.0) / Period
     var float BETA  =  math.exp(-ALPHA )
     var float COEF2 = -math.pow(BETA, 2)
@@ -188,7 +159,7 @@ superSmoother(float Series, float Period) =>
 //@function 
 //@param 
 //@returns 
-fastRMS(float Series, float Period) =>
+fastRMS(float Series = close, int Period = 100) => //not for overlay
     if Period < 1
         runtime.error("Err: fastRMS(Period=) is less than 1")
     var float COEF0 = 2.0 / (Period + 1)
