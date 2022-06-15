@@ -299,17 +299,17 @@ calcWeight(src, length, i) => //do not export
     distanceSum
 
 idwma(float src = close, int len = 10) =>
-        float sum = 0.0
-        float weightSum = 0.0
-        for i = 0 to len - 1 by 1
-            weight = calcWeight(src, len, i)
-            sum += nz(src[i]) * weight
-            weightSum += weight
-            weightSum
-        idwma = sum / weightSum
-        float result = 0
-        result := idwma
-        result    
+    float sum = 0.0
+    float weightSum = 0.0
+    for i = 0 to len - 1 by 1
+        weight = calcWeight(src, len, i)
+        sum += nz(src[i]) * weight
+        weightSum += weight
+        weightSum
+    idwma = sum / weightSum
+    float result = 0
+    result := idwma
+    result    
 //TODO: MAKE A NICE ALIES FOR THE FUNCTIONS , PUT ALIES IN FULL FUNCTION NAME COMPILER DIRECTIVE
 //TODO: MAKE A NICE FUNCTION THAT ENCAPSULATES THE AVERAGES AND THE DEVIATIONS 
 
