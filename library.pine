@@ -36,7 +36,7 @@ timeChange(period) =>
 //@function 
 //@param 
 //@returns 
-formated_string(int input) =>
+format_string(int input) =>
     formated_string = str.format("{0,number,integer}", input)
     formated_string
 
@@ -205,14 +205,14 @@ vwap(float source = close, string isNewPeriod = "Session", int custom = 15) =>
 	var float sumSrcVol = na
 	var float sumVol = na
     var float sumSrcSrcVol = na
-    _custom = format_string(custom)
+    //_custom = format_string(custom)
     _isNewPeriod = 
      isNewPeriod == "Session" ? timeChange("D")   :
      isNewPeriod == "Week"    ? timeChange("W")   :
      isNewPeriod == "Month"   ? timeChange("M")   :
      isNewPeriod == "Quarter" ? timeChange("3M")  :
      isNewPeriod == "Year"    ? timeChange("12M") : 
-     isNewPeriod == "Custom"  ? _custom           : na
+     isNewPeriod == "Custom"  ? custom            : na
 	sumSrcVol := _isNewPeriod ? source * volume : source * volume + sumSrcVol[1]
 	sumVol := _isNewPeriod ? volume : volume + sumVol[1]
 	sumSrcSrcVol := _isNewPeriod ? volume * math.pow(source, 2) : volume * math.pow(source, 2) + sumSrcSrcVol[1]
@@ -240,9 +240,9 @@ qqe2(float src = close, int len = 7, int smoothing = 5, float qqe_factor = 4.236
     ma_atr_rsi = ema(atr_rsi, wilders_period)
     delta_fast_atr_rsi = ema(ma_atr_rsi, wilders_period) * qqe_factor
 
-    long_band = 0.0
-    short_band = 0.0
-    trend = 0
+    float long_band = 0.0
+    float short_band = 0.0
+    float trend = 0
 
     new_short_band = rsi_ma + delta_fast_atr_rsi
     new_long_band = rsi_ma - delta_fast_atr_rsi
@@ -267,7 +267,7 @@ qqe1(float src = close, int len = 7, int smoothing = 5, float qqe_factor = 4.236
     ma_atr_rsi = ema(atr_rsi, wilders_period)
     delta_fast_atr_rsi = ema(ma_atr_rsi, wilders_period) * qqe_factor
 
-    result = 0.0
+    float result = 0.0
     result := rsi_ma > nz(result[1]) ? rsi_ma - delta_fast_atr_rsi < result[1] ? result[1] : rsi_ma - delta_fast_atr_rsi : rsi_ma + delta_fast_atr_rsi > result[1] ? result[1] : rsi_ma + delta_fast_atr_rsi
 
     // Return
@@ -300,7 +300,7 @@ hcf(float src = close, int len = 10) =>
     result
 
 ama(er, x) => //do not export
-    a = 0.
+    float a = 0.
     a := er * x + (1 - er) * nz(a[1], x)
     a
 
@@ -310,7 +310,7 @@ ama(er, x) => //do not export
 a2rma(float src = close, int len = 10, float gamma = 3) =>
     er = math.abs(ta.change(src, len)) / math.sum(math.abs(ta.change(src)), len)
     //----
-    ma = 0.
+    float ma = 0.
     d = ta.cum(math.abs(src - nz(ma[1], src))) / bar_index * gamma
     ma := ama(er, ama(er, src > nz(ma[1], src) + d ? src + d : src < nz(ma[1], src) - d ? src - d : nz(ma[1], src)))
     float result = 0
@@ -319,13 +319,24 @@ a2rma(float src = close, int len = 10, float gamma = 3) =>
 
 //IDWMA
 calcWeight(src, length, i) => //do not export
-    distanceSum = 0.0
+    float distanceSum = 0.0
     for j = 0 to length - 1 by 1
         distanceSum += math.abs(nz(src[i]) - nz(src[j]))
         distanceSum
     distanceSum
 
-
+idwma(float src = close, int len = 10) =>
+        float sum = 0.0
+        float weightSum = 0.0
+        for i = 0 to len - 1 by 1
+            weight = calcWeight(src, len, i)
+            sum += nz(src[i]) * weight
+            weightSum += weight
+            weightSum
+        idwma = sum / weightSum
+        float result = 0
+        result := idwma
+        result    
 //TODO: MAKE A NICE ALIES FOR THE FUNCTIONS , PUT ALIES IN FULL FUNCTION NAME COMPILER DIRECTIVE
 //TODO: MAKE A NICE FUNCTION THAT ENCAPSULATES THE AVERAGES AND THE DEVIATIONS 
 
