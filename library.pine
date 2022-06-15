@@ -294,6 +294,7 @@ hcFilter(a, b, length) => //do not export
 //@returns 
 hcf(float src = close, int len = 10) =>
     float output = 0.
+    float result = 0.
     output := hcFilter(src, nz(output[1], src), len)
     result := output
     result
